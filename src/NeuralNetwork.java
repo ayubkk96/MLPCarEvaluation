@@ -1,4 +1,3 @@
-import java.util.Arrays;
 import java.util.List;
 
 public class NeuralNetwork {
@@ -31,15 +30,15 @@ public class NeuralNetwork {
             double[] targetOutput = labels.get(featureIndex);
 
             //get the error and the delta for each neuron in the output layer
-            double[] deltaOutput = getDelta(targetOutput, output);
+            double[] deltaOutput = getDeltaOutputLayer(targetOutput, output);
 
             //update the weights and biases for the output layer
             updateWeights(LEARNING_RATE, deltaOutput, hidden2Output, weightsOutputLayer);
             updateBias(LEARNING_RATE, deltaOutput, biasOutputLayer);
 
-            //back propagate the error to the hidden layer
+            //back propagate the error to the second hidden layer
             //tells each hidden2 neuron how much it contributed to the output error
-            double[] deltaHidden2 = getDelta(deltaOutput, hidden2Output);
+             double[] deltaHidden2 = getDeltaHiddenLayer(deltaOutput, hidden2Output);
 
         }
     }
@@ -69,7 +68,7 @@ public class NeuralNetwork {
         return output * (1 - output);
     }
 
-    private static double[] getDelta(double[] targetOutput, double[] output) {
+    private static double[] getDeltaOutputLayer(double[] targetOutput, double[] output) {
         double[] error = new double[output.length];
         double[] delta = new double[output.length];
         for (int i = 0; i < error.length; i++) {
@@ -77,6 +76,10 @@ public class NeuralNetwork {
             delta[i] = computeDelta(error[i], output[i]);
         }
         return delta;
+    }
+
+    private static double[] getDeltaHiddenLayer(double[] deltaOutput, double[] hidden2Output) {
+
     }
 
     public static double[] forwardPropagate(double[] inputVector, double[][] weightsHidden,

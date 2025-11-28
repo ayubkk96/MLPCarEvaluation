@@ -31,14 +31,15 @@ public class NeuralNetwork {
             double[] targetOutput = labels.get(featureIndex);
 
             //get the error and the delta for each neuron in the output layer
-            double[] delta = getDelta(targetOutput, output);
+            double[] deltaOutput = getDelta(targetOutput, output);
 
             //update the weights and biases for the output layer
-            updateWeights(LEARNING_RATE, delta, hidden2Output, weightsOutputLayer);
-            updateBias(LEARNING_RATE, delta, biasOutputLayer);
+            updateWeights(LEARNING_RATE, deltaOutput, hidden2Output, weightsOutputLayer);
+            updateBias(LEARNING_RATE, deltaOutput, biasOutputLayer);
 
             //back propagate the error to the hidden layer
             //tells each hidden2 neuron how much it contributed to the output error
+            double[] deltaHidden2 = getDelta(deltaOutput, hidden2Output);
 
         }
     }

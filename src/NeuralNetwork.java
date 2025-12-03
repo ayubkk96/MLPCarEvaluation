@@ -38,7 +38,12 @@ public class NeuralNetwork {
 
             //back propagate the error to the second hidden layer
             //tells each hidden2 neuron how much it contributed to the output error
-             double[] deltaHidden2 = getDeltaHiddenLayer(deltaOutput, hidden2Output);
+             double[] deltaHidden2 = getDeltaHiddenLayer2(deltaOutput, weightsOutputLayer, hidden2Output);
+
+             //back prop to hidden layer 1
+            double[] deltaHidden1 = getDeltaHiddenLayer1(deltaHidden2, weightsHidden2, hidden1Output);
+
+            //UPDATE QUICK APPARENTLY MY UPDATE WEIGHTS FUNCTION IS BACKWARDS?
 
         }
     }
@@ -78,8 +83,32 @@ public class NeuralNetwork {
         return delta;
     }
 
-    private static double[] getDeltaHiddenLayer(double[] deltaOutput, double[] hidden2Output) {
+    // ---- delta for hidden layer 2 ----
+    private static double[] getDeltaHiddenLayer2(double[] deltaOutput, double[][] weightsOutputLayer,
+                                                double[] hidden2Output) {
+        double[] deltaH2 = new double[HIDDEN_LAYER_2_SIZE];
+        for (int h2 = 0; h2 < HIDDEN_LAYER_2_SIZE; h2++) {
+            double sum = 0;
+            for (int o = 0; o < OUTPUT_LAYER_SIZE; o++) {
+                sum += weightsOutputLayer[o][h2] * deltaOutput[o];
+            }
+            deltaH2[h2] = sigmoidDerivative(hidden2Output[h2]) * sum;
+        }
+        return deltaH2;
+    }
 
+    // ---- delta for hidden layer 1 ----
+    private static double[] getDeltaHiddenLayer1(double[] hiddenLayer2Output, double[][] weightsHiddenLayer2,
+                                                double[] hidden1Output) {
+        double[] deltaH1 = new double[HIDDEN_LAYER_1_SIZE];
+        for (int h1 = 0; h1 < HIDDEN_LAYER_1_SIZE; h1++) {
+            double sum = 0;
+            for (int h2 = 0; h2 < HIDDEN_LAYER_2_SIZE; h2++) {
+                sum += weightsHiddenLayer2[h2][h1] * hiddenLayer2Output[h2];
+            }
+            deltaH1[h1] = sigmoidDerivative(hidden1Output[h1]) * sum;
+        }
+        return deltaH1;
     }
 
     public static double[] forwardPropagate(double[] inputVector, double[][] weightsHidden,

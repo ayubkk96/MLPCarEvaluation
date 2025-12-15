@@ -1,3 +1,4 @@
+import java.util.Arrays;
 import java.util.List;
 
 public class NeuralNetwork {
@@ -8,60 +9,73 @@ public class NeuralNetwork {
     static final int OUTPUT_LAYER_SIZE = 4;
     static final double LEARNING_RATE = 0.1;
 
-    public static void consumeFeaturesAndLabels(List<double[]> features, List<double[]> labels) {
+    public static void train(int epochs, List<double[]> features, List<double[]> labels) {
         double[][] weightsHidden1 = randomiseWeights(features.get(0).length, HIDDEN_LAYER_1_SIZE);
         double[] biasHidden1 = randomiseBiasHidden(HIDDEN_LAYER_1_SIZE);
         double[][] weightsHidden2 = randomiseWeights(HIDDEN_LAYER_1_SIZE, HIDDEN_LAYER_2_SIZE);
         double[] biasHidden2 = randomiseBiasHidden(HIDDEN_LAYER_2_SIZE);
         double[][] weightsOutputLayer = randomiseWeights(HIDDEN_LAYER_2_SIZE, OUTPUT_LAYER_SIZE);
         double[] biasOutputLayer = randomiseBiasHidden(OUTPUT_LAYER_SIZE);
+        for (int epoch = 0; epoch < epochs; epoch++) {
 
-        for (int featureIndex = 0; featureIndex < features.size(); featureIndex++) {
-            double[] feature = features.get(featureIndex);
-            //forward propagate
-            double[] hidden1Output = forwardPropagate(feature, weightsHidden1,
-                    biasHidden1, HIDDEN_LAYER_1_SIZE);
-            double[] hidden2Output = forwardPropagate(hidden1Output, weightsHidden2,
-                    biasHidden2, HIDDEN_LAYER_2_SIZE);
-            double[] output = forwardPropagate(hidden2Output, weightsOutputLayer,
-                    biasOutputLayer, OUTPUT_LAYER_SIZE);
+            double totalLoss = 0;
+            int correct = 0;
 
-            //get the target output for the current feature so we can classify
-            double[] targetOutput = labels.get(featureIndex);
+            for (int featureIndex = 0; featureIndex < features.size(); featureIndex++) {
 
-            //get the error and the delta for each neuron in the output layer
-            double[] deltaOutput = getDeltaOutputLayer(targetOutput, output);
+                double[] feature = features.get(featureIndex);
+                double[] targetOutput = labels.get(featureIndex);
 
-            //update the weights and biases for the output layer
-            updateWeights(LEARNING_RATE, deltaOutput, hidden2Output, weightsOutputLayer);
-            updateBias(LEARNING_RATE, deltaOutput, biasOutputLayer);
+                // ---- forward ----
+                double[] hidden1Output = forwardPropagate(feature, weightsHidden1, biasHidden1, HIDDEN_LAYER_1_SIZE);
+                double[] hidden2Output = forwardPropagate(hidden1Output, weightsHidden2, biasHidden2, HIDDEN_LAYER_2_SIZE);
+                double[] output = forwardPropagate(hidden2Output, weightsOutputLayer, biasOutputLayer, OUTPUT_LAYER_SIZE);
 
-            //back propagate the error to the second hidden layer
-            //tells each hidden2 neuron how much it contributed to the output error
-             double[] deltaHidden2 = getDeltaHiddenLayer2(deltaOutput, weightsOutputLayer, hidden2Output);
+                // ---- loss ----
+                totalLoss += meanSquaredError(targetOutput, output);
 
-             //back prop to hidden layer 1
-            double[] deltaHidden1 = getDeltaHiddenLayer1(deltaHidden2, weightsHidden2, hidden1Output);
+                // ---- accuracy ----
+                if (argMax(output) == argMax(targetOutput)) {
+                    correct++;
+                }
 
-            //UPDATE QUICK APPARENTLY MY UPDATE WEIGHTS FUNCTION IS BACKWARDS?
+                // ---- deltas ----
+                double[] deltaOutput = getDeltaOutputLayer(targetOutput, output);
+                double[] deltaHidden2 = getDeltaHiddenLayer(deltaOutput, weightsOutputLayer, hidden2Output);
+                double[] deltaHidden1 = getDeltaHiddenLayer(deltaHidden2, weightsHidden2, hidden1Output);
 
-        }
-    }
-
-    private static void updateBias(double learningRate, double[] delta, double[] biasOutputLayer) {
-        for (int deltaIndex = 0; deltaIndex < delta.length; deltaIndex++) {
-            biasOutputLayer[deltaIndex] += learningRate * delta[deltaIndex];
-        }
-    }
-
-    private static void updateWeights(double learningRate, double[] delta,
-                                      double[] hidden2Output, double[][] weightsOutputLayer) {
-        for (int deltaIndex = 0; deltaIndex < delta.length; deltaIndex++) {
-            for (int hiddenLayer2OutputNeuron = 0; hiddenLayer2OutputNeuron
-                    < hidden2Output.length; hiddenLayer2OutputNeuron++) {
-                weightsOutputLayer[deltaIndex][hiddenLayer2OutputNeuron]
-                        += learningRate * delta[deltaIndex] * hidden2Output[hiddenLayer2OutputNeuron];
+                // ---- updates ----
+                updateLayerWeightsAndBiases(LEARNING_RATE, deltaOutput, hidden2Output, weightsOutputLayer, biasOutputLayer);
+                updateLayerWeightsAndBiases(LEARNING_RATE, deltaHidden2, hidden1Output, weightsHidden2, biasHidden2);
+                updateLayerWeightsAndBiases(LEARNING_RATE, deltaHidden1, feature, weightsHidden1, biasHidden1);
             }
+
+            double avgLoss = totalLoss / features.size();
+            double accuracy = (double) correct / features.size();
+
+            System.out.printf(
+                    "Epoch %d | Loss: %.6f | Accuracy: %.2f%%%n",
+                    epoch + 1,
+                    avgLoss,
+                    accuracy * 100
+            );
+        }
+    }
+
+    private static void updateLayerWeightsAndBiases(
+            double learningRate,
+            double[] deltaCurrentLayer,
+            double[] prevLayerOutput,
+            double[][] weightsCurrentLayer,
+            double[] biasCurrentLayer
+    ) {
+        for (int neuron = 0; neuron < deltaCurrentLayer.length; neuron++) {
+            for (int prev = 0; prev < prevLayerOutput.length; prev++) {
+                weightsCurrentLayer[neuron][prev] += learningRate
+                        * deltaCurrentLayer[neuron]
+                        * prevLayerOutput[prev];
+            }
+            biasCurrentLayer[neuron] += learningRate * deltaCurrentLayer[neuron];
         }
     }
 
@@ -83,32 +97,17 @@ public class NeuralNetwork {
         return delta;
     }
 
-    // ---- delta for hidden layer 2 ----
-    private static double[] getDeltaHiddenLayer2(double[] deltaOutput, double[][] weightsOutputLayer,
-                                                double[] hidden2Output) {
-        double[] deltaH2 = new double[HIDDEN_LAYER_2_SIZE];
-        for (int h2 = 0; h2 < HIDDEN_LAYER_2_SIZE; h2++) {
+    private static double[] getDeltaHiddenLayer(double[] deltaNextLayer, double[][] weightsNextLayer,
+                                                double[] currentLayerOutput) {
+        double[] deltaCurrentLayer = new double[currentLayerOutput.length];
+        for (int i = 0; i < currentLayerOutput.length; i++) {
             double sum = 0;
-            for (int o = 0; o < OUTPUT_LAYER_SIZE; o++) {
-                sum += weightsOutputLayer[o][h2] * deltaOutput[o];
+            for (int o = 0; o < deltaNextLayer.length; o++) {
+                sum += weightsNextLayer[o][i] * deltaNextLayer[o];
             }
-            deltaH2[h2] = sigmoidDerivative(hidden2Output[h2]) * sum;
+            deltaCurrentLayer[i] = sigmoidDerivative(currentLayerOutput[i]) * sum;
         }
-        return deltaH2;
-    }
-
-    // ---- delta for hidden layer 1 ----
-    private static double[] getDeltaHiddenLayer1(double[] hiddenLayer2Output, double[][] weightsHiddenLayer2,
-                                                double[] hidden1Output) {
-        double[] deltaH1 = new double[HIDDEN_LAYER_1_SIZE];
-        for (int h1 = 0; h1 < HIDDEN_LAYER_1_SIZE; h1++) {
-            double sum = 0;
-            for (int h2 = 0; h2 < HIDDEN_LAYER_2_SIZE; h2++) {
-                sum += weightsHiddenLayer2[h2][h1] * hiddenLayer2Output[h2];
-            }
-            deltaH1[h1] = sigmoidDerivative(hidden1Output[h1]) * sum;
-        }
-        return deltaH1;
+        return deltaCurrentLayer;
     }
 
     public static double[] forwardPropagate(double[] inputVector, double[][] weightsHidden,
@@ -145,5 +144,26 @@ public class NeuralNetwork {
             biasHidden[i] = (-0.5 + (Math.random() * 1.0));
         }
         return biasHidden;
+    }
+
+    private static double meanSquaredError(double[] target, double[] output) {
+        double sum = 0;
+        for (int i = 0; i < target.length; i++) {
+            double diff = target[i] - output[i];
+            sum += diff * diff;
+        }
+        return sum / target.length;
+    }
+
+    private static int argMax(double[] values) {
+        int index = 0;
+        double max = values[0];
+        for (int i = 1; i < values.length; i++) {
+            if (values[i] > max) {
+                max = values[i];
+                index = i;
+            }
+        }
+        return index;
     }
 }

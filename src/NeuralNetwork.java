@@ -1,4 +1,3 @@
-import java.util.Arrays;
 import java.util.List;
 
 public class NeuralNetwork {
@@ -8,14 +7,20 @@ public class NeuralNetwork {
     static final int HIDDEN_LAYER_2_SIZE = 12;
     static final int OUTPUT_LAYER_SIZE = 4;
     static final double LEARNING_RATE = 0.1;
+    static double[][] weightsHidden1;
+    static double[] biasHidden1;
+    static double[][] weightsHidden2;
+    static double[] biasHidden2;
+    static double[][] weightsOutputLayer;
+    static double[] biasOutputLayer;
 
     public static void train(int epochs, List<double[]> features, List<double[]> labels) {
-        double[][] weightsHidden1 = randomiseWeights(features.get(0).length, HIDDEN_LAYER_1_SIZE);
-        double[] biasHidden1 = randomiseBiasHidden(HIDDEN_LAYER_1_SIZE);
-        double[][] weightsHidden2 = randomiseWeights(HIDDEN_LAYER_1_SIZE, HIDDEN_LAYER_2_SIZE);
-        double[] biasHidden2 = randomiseBiasHidden(HIDDEN_LAYER_2_SIZE);
-        double[][] weightsOutputLayer = randomiseWeights(HIDDEN_LAYER_2_SIZE, OUTPUT_LAYER_SIZE);
-        double[] biasOutputLayer = randomiseBiasHidden(OUTPUT_LAYER_SIZE);
+        weightsHidden1 = randomiseWeights(features.get(0).length, HIDDEN_LAYER_1_SIZE);
+        biasHidden1 = randomiseBiasHidden(HIDDEN_LAYER_1_SIZE);
+        weightsHidden2 = randomiseWeights(HIDDEN_LAYER_1_SIZE, HIDDEN_LAYER_2_SIZE);
+        biasHidden2 = randomiseBiasHidden(HIDDEN_LAYER_2_SIZE);
+        weightsOutputLayer = randomiseWeights(HIDDEN_LAYER_2_SIZE, OUTPUT_LAYER_SIZE);
+        biasOutputLayer = randomiseBiasHidden(OUTPUT_LAYER_SIZE);
         for (int epoch = 0; epoch < epochs; epoch++) {
 
             double totalLoss = 0;
@@ -26,25 +31,25 @@ public class NeuralNetwork {
                 double[] feature = features.get(featureIndex);
                 double[] targetOutput = labels.get(featureIndex);
 
-                // ---- forward ----
+                // forward
                 double[] hidden1Output = forwardPropagate(feature, weightsHidden1, biasHidden1, HIDDEN_LAYER_1_SIZE);
                 double[] hidden2Output = forwardPropagate(hidden1Output, weightsHidden2, biasHidden2, HIDDEN_LAYER_2_SIZE);
                 double[] output = forwardPropagate(hidden2Output, weightsOutputLayer, biasOutputLayer, OUTPUT_LAYER_SIZE);
 
-                // ---- loss ----
+                // loss
                 totalLoss += meanSquaredError(targetOutput, output);
 
-                // ---- accuracy ----
+                // accuracy
                 if (argMax(output) == argMax(targetOutput)) {
                     correct++;
                 }
 
-                // ---- deltas ----
+                // deltas
                 double[] deltaOutput = getDeltaOutputLayer(targetOutput, output);
                 double[] deltaHidden2 = getDeltaHiddenLayer(deltaOutput, weightsOutputLayer, hidden2Output);
                 double[] deltaHidden1 = getDeltaHiddenLayer(deltaHidden2, weightsHidden2, hidden1Output);
 
-                // ---- updates ----
+                // updates
                 updateLayerWeightsAndBiases(LEARNING_RATE, deltaOutput, hidden2Output, weightsOutputLayer, biasOutputLayer);
                 updateLayerWeightsAndBiases(LEARNING_RATE, deltaHidden2, hidden1Output, weightsHidden2, biasHidden2);
                 updateLayerWeightsAndBiases(LEARNING_RATE, deltaHidden1, feature, weightsHidden1, biasHidden1);
@@ -155,15 +160,34 @@ public class NeuralNetwork {
         return sum / target.length;
     }
 
-    private static int argMax(double[] values) {
-        int index = 0;
-        double max = values[0];
-        for (int i = 1; i < values.length; i++) {
-            if (values[i] > max) {
-                max = values[i];
-                index = i;
+    private static int argMax(double[] v) {
+        int idx = 0;
+        double best = v[0];
+        for (int i = 1; i < v.length; i++) {
+            if (v[i] > best) {
+                best = v[i];
+                idx = i;
             }
         }
-        return index;
+        return idx;
+    }
+
+    public static int predict(double[] feature) {
+        double[] h1 = forwardPropagate(feature, weightsHidden1, biasHidden1, HIDDEN_LAYER_1_SIZE);
+        double[] h2 = forwardPropagate(h1, weightsHidden2, biasHidden2, HIDDEN_LAYER_2_SIZE);
+        double[] out = forwardPropagate(h2, weightsOutputLayer, biasOutputLayer, OUTPUT_LAYER_SIZE);
+        return argMax(out);
+    }
+
+    public static double evaluateAccuracy(List<double[]> features, List<double[]> labels) {
+        int correct = 0;
+
+        for (int i = 0; i < features.size(); i++) {
+            int pred = predict(features.get(i));
+            int truth = argMax(labels.get(i));
+            if (pred == truth) correct++;
+        }
+
+        return (double) correct / features.size();
     }
 }

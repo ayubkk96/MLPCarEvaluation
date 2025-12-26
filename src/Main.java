@@ -38,6 +38,7 @@ public class Main {
 
         // train
         NeuralNetwork.train(200, trainX, trainY);
+        NeuralNetwork.saveModel("model.txt");
 
         // test
         double testAcc = NeuralNetwork.evaluateAccuracy(testX, testY);

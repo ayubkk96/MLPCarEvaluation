@@ -1,4 +1,9 @@
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
+import java.util.Scanner;
 
 public class NeuralNetwork {
     // 16 neurons, 21 weights each
@@ -189,5 +194,79 @@ public class NeuralNetwork {
         }
 
         return (double) correct / features.size();
+    }
+
+    public static void saveModel(String path) {
+        try (PrintWriter out = new PrintWriter(new FileWriter(path))) {
+
+            saveMatrix(out, weightsHidden1);
+            saveVector(out, biasHidden1);
+
+            saveMatrix(out, weightsHidden2);
+            saveVector(out, biasHidden2);
+
+            saveMatrix(out, weightsOutputLayer);
+            saveVector(out, biasOutputLayer);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to save model", e);
+        }
+    }
+
+    private static void saveMatrix(PrintWriter out, double[][] m) {
+        out.println(m.length + " " + m[0].length);
+        for (double[] row : m) {
+            for (double v : row) {
+                out.print(v + " ");
+            }
+            out.println();
+        }
+    }
+
+    private static void saveVector(PrintWriter out, double[] v) {
+        out.println(v.length);
+        for (double x : v) {
+            out.print(x + " ");
+        }
+        out.println();
+    }
+
+    public static void loadModel(String path) {
+        try (Scanner sc = new Scanner(new File(path))) {
+
+            weightsHidden1 = loadMatrix(sc);
+            biasHidden1    = loadVector(sc);
+
+            weightsHidden2 = loadMatrix(sc);
+            biasHidden2    = loadVector(sc);
+
+            weightsOutputLayer = loadMatrix(sc);
+            biasOutputLayer    = loadVector(sc);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load model", e);
+        }
+    }
+
+    private static double[][] loadMatrix(Scanner sc) {
+        int rows = sc.nextInt();
+        int cols = sc.nextInt();
+        double[][] m = new double[rows][cols];
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                m[i][j] = sc.nextDouble();
+            }
+        }
+        return m;
+    }
+
+    private static double[] loadVector(Scanner sc) {
+        int size = sc.nextInt();
+        double[] v = new double[size];
+        for (int i = 0; i < size; i++) {
+            v[i] = sc.nextDouble();
+        }
+        return v;
     }
 }

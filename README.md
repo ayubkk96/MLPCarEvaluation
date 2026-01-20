@@ -1,9 +1,5 @@
 Training a neural network to categorise a car's quality based on training data sets provided by UCI Machine Learning Repository https://archive.ics.uci.edu/dataset/19/car+evaluation
 
-
-Here’s a clean, professional README for the MLP-only repository, focused on the machine learning implementation, not the web app.
-No emojis, portfolio-ready, and clearly separated in scope.
-
 ⸻
 
 Multilayer Perceptron (MLP) – Car Evaluation Classifier
